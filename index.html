@@ -1,0 +1,1507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3F6F4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zhuyin">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231E2740'/%3E%3Crect x='14' y='14' width='36' height='36' fill='white' stroke='%23E5A9A2' stroke-width='3'/%3E%3Cpath d='M32 14v36M14 32h36' stroke='%23E5A9A2' stroke-width='2' stroke-dasharray='4 3'/%3E%3C/svg%3E">
+<title>Zhuyin for English speakers</title>
+<meta name="description" content="Learn the 37 zhuyin (bopomofo) symbols and 5 tones by ear, with a chart, flashcards, two listening quizzes and a syllable builder.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================================
+   DESIGN TOKENS
+   The page borrows from Taiwanese practice paper: pale paper, blue-black ink,
+   and the 田字格 (tian zi ge) square with a dashed cross that children write
+   zhuyin in. That square (.tian) is the one distinctive element; everything
+   else stays quiet.
+   ========================================================================= */
+:root {
+  --paper: #F3F6F4;
+  --surface: #FFFFFF;
+  --ink: #1E2740;
+  --ink-soft: #4A5470;
+  --jade: #1D7A6B;
+  --jade-deep: #14594E;
+  --jade-wash: #DDEFEA;
+  --grid: #E5A9A2;          /* dashed practice-paper lines */
+  --seal: #B3322A;          /* mistakes */
+  --seal-wash: #F8E4E2;
+  --mist: #D3DDD8;          /* quiet borders */
+
+  --font-ui: "Lexend", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-zh: "Noto Serif TC", "Songti TC", "Noto Serif CJK TC", "PMingLiU", "MingLiU", serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1rem/1.6 var(--font-ui);
+}
+[lang|="zh"] { font-family: var(--font-zh); }
+h1, h2, h3, p { overflow-wrap: anywhere; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--surface); padding: 8px 12px; border-radius: 6px; z-index: 10; }
+.skip:focus { left: 12px; }
+
+/* =========================================================================
+   THE PRACTICE SQUARE (田字格)
+   Size it with --s, scale the glyph with --fs.
+   ========================================================================= */
+.tian {
+  --s: 62px;
+  --fs: .62;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--s);
+  height: var(--s);
+  padding: 0;
+  background: var(--surface);
+  border: 2px solid var(--grid);
+  border-radius: 3px;
+  font-family: var(--font-zh);
+  font-weight: 500;
+  font-size: calc(var(--s) * var(--fs));
+  line-height: 1;
+  color: var(--ink);
+}
+.tian::before, .tian::after { content: ""; position: absolute; pointer-events: none; }
+.tian::before { left: 0; right: 0; top: 50%; border-top: 1.5px dashed var(--grid); }
+.tian::after  { top: 0; bottom: 0; left: 50%; border-left: 1.5px dashed var(--grid); }
+.tian > * { position: relative; z-index: 1; }
+.tian--sm   { --s: 44px; }
+.tian--chip { --s: 46px; --fs: .6; }
+.tian--slot { --s: 76px; }
+.tian--hero { --s: 190px; }
+@media (max-width: 600px) { .tian--hero { --s: 150px; } }
+@media (min-width: 900px) { .detail .tian--hero { --s: 160px; } }
+@media (max-width: 480px) { .tian--slot { --s: 62px; } }   /* keeps all four Build slots on one row */
+
+/* A practice square that is also a play button (listening quiz) */
+.tian--play { cursor: pointer; color: var(--jade-deep); }
+.tian--play:hover { border-color: var(--ink); }
+.tian--play svg { width: 42%; height: 42%; }
+
+/* Progress pips in a tile's bottom-right corner */
+.tian > .pips { position: absolute; right: 5px; bottom: 5px; display: flex; gap: 3px; }
+.pips i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--mist); }
+.pips i.on { background: var(--jade); }
+.tian--hero .pips { right: 10px; bottom: 10px; gap: 5px; }
+.tian--hero .pips i { width: 10px; height: 10px; }
+
+/* =========================================================================
+   MASTHEAD AND NAVIGATION
+   ========================================================================= */
+.masthead { padding-top: 22px; }
+.masthead-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand-tiles { display: flex; }
+.brand-tiles .tian + .tian { margin-left: -2px; }
+h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; font-weight: 600; }
+.tagline { margin: 4px 0 0; color: var(--ink-soft); font-size: .95rem; max-width: 64ch; }
+.progress { margin: 0; font-size: .9rem; color: var(--ink-soft); }
+
+.nav {
+  display: flex; gap: 4px; margin-top: 20px; padding: 4px;
+  width: max-content; max-width: 100%; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--mist); border-radius: 12px;
+}
+.nav button {
+  border: 0; background: none; color: var(--ink-soft);
+  font-weight: 500; font-size: .95rem; padding: .55rem 1rem; border-radius: 9px; cursor: pointer;
+}
+.nav button:hover { color: var(--ink); }
+.nav button[aria-current="page"] { background: var(--ink); color: #fff; }
+/* Tab icons and the sheet bar are only used on phones (see the phone block at the end of the styles) */
+.nav-ico, .sheet-bar { display: none; }
+
+/* main.wrap and footer.wrap (not bare main/footer) so these beat .wrap's padding shorthand */
+main.wrap { padding-top: 28px; padding-bottom: 56px; outline: none; }
+
+/* =========================================================================
+   BUTTONS AND CONTROLS
+   ========================================================================= */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 500; font-size: .95rem; padding: .6rem 1.05rem;
+  border-radius: 8px; border: 1.5px solid var(--ink); background: var(--surface); color: var(--ink);
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+}
+.btn:hover:not(:disabled) { background: var(--mist); }
+.btn--primary { background: var(--jade); border-color: var(--jade); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: var(--jade-deep); border-color: var(--jade-deep); }
+.btn--quiet { border-color: var(--mist); color: var(--ink-soft); }
+.btn--icon { padding: .5rem .6rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.segmented { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; background: var(--surface); border: 1px solid var(--mist); border-radius: 999px; }
+.segmented button { border: 0; background: none; color: var(--ink-soft); font-size: .9rem; font-weight: 500; padding: .4rem .9rem; border-radius: 999px; cursor: pointer; }
+.segmented button:hover { color: var(--ink); }
+.segmented button[aria-pressed="true"] { background: var(--jade); color: #fff; }
+.control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.control-label { font-size: .9rem; color: var(--ink-soft); min-width: 7.5rem; }
+
+/* =========================================================================
+   CHART VIEW
+   ========================================================================= */
+.chart { display: grid; gap: 28px; }
+@media (min-width: 900px) {
+  .chart { grid-template-columns: 360px minmax(0, 1fr); gap: 48px; align-items: start; }
+}
+/* Sticky only when the card fits on screen, otherwise it would be cut off */
+@media (min-width: 900px) and (min-height: 860px) { .detail { position: sticky; top: 20px; } }
+.lede { margin: 0 0 24px; color: var(--ink-soft); max-width: 60ch; }
+
+.detail-card {
+  display: grid; gap: 14px; justify-items: start;
+  padding: 24px; background: var(--surface); border: 1px solid var(--mist); border-radius: 14px;
+}
+.detail-tile { display: grid; justify-self: center; }
+.detail-card h2 { margin: 0; font-size: 1.6rem; line-height: 1.15; font-weight: 600; }
+.sound-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.kind { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+.hint { margin: 0; max-width: 52ch; }
+.small-note { margin: 0; color: var(--ink-soft); font-size: .85rem; }
+.words-title { margin: 6px 0 -4px; font-size: .95rem; font-weight: 600; }
+
+.word-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: 100%; }
+.word-row { display: flex; align-items: center; gap: 14px; padding: 10px 12px; background: var(--paper); border: 1px solid var(--mist); border-radius: 10px; }
+.wr-char { flex: none; min-width: 3.4rem; font-family: var(--font-zh); font-size: 1.7rem; line-height: 1.1; font-weight: 500; }
+.wr-body { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.wr-zy { font-family: var(--font-zh); font-size: 1.1rem; line-height: 1.3; }
+.wr-en { font-size: .88rem; color: var(--ink-soft); }
+.hl { color: var(--jade-deep); background: var(--jade-wash); border-radius: 3px; font-weight: 700; }
+
+.family { margin: 0 0 28px; }
+.family h3 { margin: 0 0 4px; font-size: 1.1rem; font-weight: 600; }
+.family .note { margin: 0 0 14px; color: var(--ink-soft); font-size: .92rem; max-width: 62ch; }
+.subgroups { display: flex; flex-wrap: wrap; gap: 20px 28px; }
+.subgroup-label { margin: 0 0 8px; font-size: .82rem; color: var(--ink-soft); }
+.subgroup-items { display: flex; gap: 10px; }
+
+.sym { display: grid; justify-items: center; gap: 5px; background: none; border: 0; padding: 0; cursor: pointer; }
+.sym-name { min-height: 1.3em; font-size: .85rem; color: var(--ink-soft); }
+.sym:hover .tian { border-color: var(--ink); }
+.sym[aria-pressed="true"] .tian { background: var(--jade-wash); border-color: var(--jade-deep); }
+
+/* =========================================================================
+   PRACTICE PANELS (flashcards, quiz, build)
+   ========================================================================= */
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
+.panel-head h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
+
+.card {
+  display: grid; gap: 24px; align-items: start;
+  padding: 24px; background: var(--surface); border: 1px solid var(--mist); border-radius: 14px;
+}
+@media (min-width: 720px) { .card { grid-template-columns: auto 1fr; gap: 36px; } }
+.card--single { grid-template-columns: 1fr; }
+.card-tile { display: grid; justify-self: center; }
+.card-body { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.card-body p { margin: 0; max-width: 56ch; }
+.prompt { font-size: 1.15rem; font-weight: 500; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.keys { color: var(--ink-soft); font-size: .85rem; }
+.card-body h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.option {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 14px 16px;
+  text-align: left; cursor: pointer;
+  background: var(--surface); color: var(--ink); border: 1.5px solid var(--mist); border-radius: 10px;
+}
+.option:hover:not(:disabled) { border-color: var(--ink); }
+.option:disabled { cursor: default; color: var(--ink); }
+.opt-key { display: grid; place-items: center; flex: none; width: 22px; height: 22px; font-size: .78rem; color: var(--ink-soft); border: 1px solid var(--mist); border-radius: 4px; }
+.opt-zh { font-family: var(--font-zh); font-size: 2rem; line-height: 1; }
+.option.is-correct { border-color: var(--jade); background: var(--jade-wash); color: var(--jade-deep); }
+.option.is-wrong { border-color: var(--seal); background: var(--seal-wash); color: var(--seal); }
+
+/* Quiz: see the symbol, pick the sound */
+.sound-options { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sound-opt { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; background: var(--surface); border: 1.5px solid var(--mist); border-radius: 10px; }
+.sound-opt > :last-child { margin-left: auto; }
+.sound-opt.is-correct { border-color: var(--jade); background: var(--jade-wash); }
+.sound-opt.is-wrong { border-color: var(--seal); background: var(--seal-wash); }
+.sound-reveal { font-family: var(--font-zh); font-size: 1.6rem; line-height: 1.1; }
+
+.feedback { display: grid; gap: 12px; padding: 16px 18px; background: var(--surface); border: 1.5px solid var(--mist); border-radius: 10px; }
+.feedback.ok { border-color: var(--jade); background: var(--jade-wash); }
+.feedback.bad { border-color: var(--seal); background: var(--seal-wash); }
+.fb-title { font-weight: 600; }
+.feedback.ok .fb-title { color: var(--jade-deep); }
+.feedback.bad .fb-title { color: var(--seal); }
+
+.score { font-size: 2.4rem; font-weight: 600; line-height: 1.1; }
+.missed { display: flex; flex-wrap: wrap; gap: 14px; }
+.miss { display: grid; justify-items: center; gap: 5px; }
+
+/* Words view */
+.words-intro { display: grid; gap: 8px; margin-bottom: 20px; }
+.words-intro .lede { margin: 0; }
+.wb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.wb { display: grid; grid-template-columns: 4rem minmax(0, 1fr) auto; align-items: center; gap: 8px 18px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--mist); border-radius: 12px; }
+.wb-char { font-family: var(--font-zh); font-size: 2.5rem; line-height: 1; font-weight: 500; text-align: center; }
+.wb-main { display: grid; gap: 6px; min-width: 0; }
+.wb-en { font-size: .9rem; color: var(--ink-soft); }
+.wb-parts { display: flex; flex-wrap: wrap; gap: 8px; }
+.wb-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+@media (max-width: 640px) {
+  .wb { grid-template-columns: 3.4rem minmax(0, 1fr); padding: 12px 14px; }
+  .wb-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* Build mode */
+.build { display: grid; gap: 24px; }
+.build > .panel-head { margin-bottom: 0; }
+.build > .lede { margin: 0; }
+.word { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 28px; padding: 20px 24px; background: var(--surface); border: 1px solid var(--mist); border-radius: 14px; }
+.word-info { display: grid; gap: 8px; justify-items: start; }
+.word-meaning { margin: 0; font-size: 1.4rem; font-weight: 500; }
+.workbench { display: grid; gap: 18px; padding: 20px 24px; background: var(--surface); border: 1px solid var(--mist); border-radius: 14px; }
+.slots { display: flex; flex-wrap: wrap; gap: 14px; }
+.slot { display: grid; justify-items: center; gap: 6px; background: none; border: 0; padding: 0; color: var(--ink-soft); font-size: .85rem; cursor: pointer; }
+.slot.is-filled .tian { border-color: var(--jade); }
+.slot.is-wrong .tian { border-color: var(--seal); background: var(--seal-wash); }
+.preview { margin: 0; min-height: 1.4em; font-family: var(--font-zh); font-size: 2rem; line-height: 1.3; }
+.palette { display: grid; gap: 16px; }
+.pal-group h3 { margin: 0 0 8px; font-size: .95rem; font-weight: 600; }
+.pal-tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.pal { display: grid; justify-items: center; gap: 3px; background: none; border: 0; padding: 0; cursor: pointer; }
+.pal-label { font-size: .75rem; color: var(--ink-soft); }
+.pal:hover:not(:disabled) .tian { border-color: var(--ink); }
+.pal[aria-pressed="true"] .tian { background: var(--jade-wash); border-color: var(--jade-deep); }
+.pal:disabled { cursor: default; }
+
+/* =========================================================================
+   FOOTER
+   ========================================================================= */
+footer.wrap { padding-bottom: 40px; color: var(--ink-soft); font-size: .9rem; }
+footer.wrap::before { content: ""; display: block; margin-bottom: 20px; border-top: 1px solid var(--mist); }   /* rule aligned with the content, not the page padding */
+footer p { margin: 0 0 6px; max-width: 70ch; }
+.linklike { background: none; border: 0; padding: 0; color: var(--ink-soft); text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 520px) { .options { grid-template-columns: 1fr; } }
+
+/* =========================================================================
+   PHONES AND THE INSTALLED APP
+   Layout for small screens, thumb-sized controls, and room for notches and
+   the home indicator. Desktop styling is untouched by everything in here.
+   ========================================================================= */
+:root { --navh: 0px; }
+html { scroll-padding-bottom: calc(var(--navh) + 16px); }
+body { -webkit-tap-highlight-color: transparent; }
+button, .sym, .pal, .slot { touch-action: manipulation; }          /* taps respond at once, no double-tap zoom delay */
+.tian, .brand-tiles { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.wrap { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+
+/* Build's instructions: just text on wide screens, folded away behind a tap on phones */
+.how > summary { display: none; }
+.how .lede { margin: 0; }
+
+/* Touch screens: every control at least 44px, no keyboard hints */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn--icon { min-width: 44px; justify-content: center; }
+  .segmented button { min-height: 44px; padding: .5rem 1rem; }
+  .linklike { padding: 12px 6px; margin: -12px -6px; }
+  .pal-label { font-size: .82rem; }
+}
+@media (hover: none) { .opt-key, .keys--kbd { display: none; } }
+
+/* Under 900px the symbol details become a bottom sheet, so the chart is on screen first
+   and tapping a symbol no longer throws the page back to the top. */
+@media (max-width: 899px) {
+  .chart { display: block; }
+  .detail {
+    position: fixed; left: 0; right: 0; bottom: var(--navh); z-index: 20;
+    display: flex; flex-direction: column;
+    max-height: min(68vh, 560px); max-height: min(68dvh, 560px);
+    background: var(--surface); border-top: 1px solid var(--mist); border-radius: 18px 18px 0 0;
+    box-shadow: 0 -10px 32px rgba(30, 39, 64, .20);
+    visibility: hidden; transform: translateY(calc(100% + 28px));
+    transition: transform .22s ease, visibility 0s linear .22s;
+  }
+  .detail.is-open { visibility: visible; transform: none; transition: transform .22s ease; }
+  .sheet-bar { display: flex; align-items: center; flex: none; position: relative; padding: 10px 8px 0 18px; min-height: 48px; }
+  .sheet-grip { position: absolute; left: 50%; top: 8px; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--mist); }
+  .sheet-close { margin-left: auto; min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--ink-soft); font-weight: 500; cursor: pointer; }
+  body.sheet-open main.wrap { padding-bottom: calc(min(68vh, 560px) + 28px); }
+  body:not(.sheet-open) .sym[aria-pressed="true"] .tian { background: var(--surface); border-color: var(--grid); }   /* nothing looks selected while the sheet is closed */
+
+  /* compact card: tile beside the Hear button and the kind of symbol, then the rest underneath */
+  .detail-card { min-height: 0; overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 0; padding: 4px 18px 20px;
+    grid-template-columns: auto minmax(0, 1fr); column-gap: 16px; row-gap: 10px; align-items: center; }
+  .detail-card > * { grid-column: 1 / -1; }
+  .detail-card > .detail-tile { grid-column: 1; grid-row: 1 / span 3; justify-self: start; }
+  .detail-card > .sound-line, .detail-card > .kind, .detail-card > h2:not(.sr) { grid-column: 2; }
+  .detail-card > .hint { max-width: none; }
+  .detail .tian--hero { --s: 92px; }
+  .detail .tian--hero .pips { right: 6px; bottom: 6px; gap: 3px; }
+  .detail .tian--hero .pips i { width: 7px; height: 7px; }
+}
+
+@media (max-width: 640px) {
+  :root { --navh: calc(62px + env(safe-area-inset-bottom, 0px)); }
+  body { padding-bottom: var(--navh); }
+
+  /* a more compact masthead */
+  .masthead { padding-top: max(14px, env(safe-area-inset-top)); }
+  .masthead-top { gap: 4px 16px; }
+  .brand { gap: 12px; }
+  .brand-tiles .tian { --s: 38px; }
+  h1 { font-size: 1.2rem; }
+  .tagline { font-size: .85rem; line-height: 1.4; }
+  .progress { font-size: .85rem; }
+  main.wrap { padding-top: 18px; padding-bottom: 28px; }
+  footer.wrap { padding-bottom: 24px; }
+  .panel-head { margin-bottom: 14px; }
+
+  /* the tabs become an app-style bar at the bottom, within thumb reach */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0; width: auto; max-width: none; gap: 2px; overflow: visible;
+    padding: 6px max(6px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left));
+    background: var(--surface); border: 0; border-top: 1px solid var(--mist); border-radius: 0; box-shadow: 0 -4px 18px rgba(30, 39, 64, .06);
+  }
+  .nav button { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 48px; padding: 6px 2px; font-size: clamp(.66rem, 3.1vw, .75rem); letter-spacing: -.01em; line-height: 1.15; border-radius: 10px; }
+  .nav button[aria-current="page"] { background: var(--jade-wash); color: var(--jade-deep); }
+  .nav-ico { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .how > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 4px; list-style: none; cursor: pointer; color: var(--jade-deep); font-weight: 500; }
+  .how > summary::-webkit-details-marker { display: none; }
+  .how > summary::after { content: "+"; font-size: 1.4rem; line-height: 1; }
+  .how[open] > summary::after { content: "\2212"; }
+  .how[open] .lede { margin-bottom: 8px; }
+
+  /* five tone tiles share one row on every phone width */
+  .subgroup-items { gap: 8px; }
+  .subgroup-items .tian { --s: min(62px, calc((100vw - 40px - 32px) / 5)); }
+
+  /* the quiz type choices are too long for one row: stack them */
+  .segmented--stack { display: flex; width: 100%; flex-direction: column; border-radius: 16px; }
+  .segmented--stack button { text-align: left; border-radius: 12px; }
+
+  /* smaller tiles so the controls stay on screen */
+  .card { padding: 18px; gap: 18px; }
+  .card-tile .tian--hero { --s: 120px; }
+  .word { flex-wrap: nowrap; gap: 16px; padding: 14px 16px; }
+  .word .tian--hero { --s: 104px; }
+  .word-meaning { font-size: 1.2rem; }
+  .workbench { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="wrap masthead">
+  <div class="masthead-top">
+    <div class="brand">
+      <div class="brand-tiles" aria-hidden="true">
+        <span class="tian tian--sm"><span lang="zh-Hant-TW">注</span></span>
+        <span class="tian tian--sm"><span lang="zh-Hant-TW">音</span></span>
+      </div>
+      <div>
+        <h1>Zhuyin for English speakers</h1>
+        <p class="tagline">The 37 symbols and 5 tones Taiwan uses to write Mandarin sounds.</p>
+      </div>
+    </div>
+    <p class="progress" id="progress" aria-live="polite"></p>
+  </div>
+  <nav class="nav" aria-label="Learning modes">
+    <button data-act="nav" data-view="chart"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span>Chart</span></button>
+    <button data-act="nav" data-view="words"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8.5L6 20v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg><span>Words</span></button>
+    <button data-act="nav" data-view="cards"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="14" height="11" rx="2"/><path d="M7 9V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/></svg><span>Flashcards</span></button>
+    <button data-act="nav" data-view="quiz"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1.1.9-1.1 1.7"/><path d="M12 17h.01"/></svg><span>Quiz</span></button>
+    <button data-act="nav" data-view="build"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="7" height="7" rx="1.5"/><rect x="14" y="13" width="7" height="7" rx="1.5"/><rect x="8.5" y="4" width="7" height="7" rx="1.5"/></svg><span>Build</span></button>
+  </nav>
+</header>
+
+<main id="main" class="wrap" tabindex="-1">
+  <noscript>This tool needs JavaScript to run.</noscript>
+</main>
+
+<footer class="wrap">
+  <p>All sounds come from your device's built-in voice, so quality varies between devices. Check what you hear against a native speaker whenever you can.</p>
+  <p>Built with help from Claude. Progress is saved only in this browser. <button class="linklike" data-act="reset-progress">Reset progress</button></p>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  /* =======================================================================
+     ===== 1. CONTENT
+     Edit this section to change what the tool teaches. Nothing below it
+     needs to change when you add symbols, words or tips.
+     ======================================================================= */
+
+  // Shorthand for an example word.
+  //   c   the word in traditional characters (this is what gets spoken)
+  //   z   its zhuyin, with a space between syllables
+  //   py  pinyin. NEVER shown to learners; it exists only so the zhuyin can be cross-checked.
+  //   en  the meaning
+  const w = (c, z, py, en) => ({ c, z, py, en });
+
+  // Every zhuyin symbol.
+  //   z          the symbol
+  //   kind       initial | medial | final
+  //   name       how the symbol is read aloud in Taiwan (ㄅ is read ㄅㄛ, as in "bo po mo fo")
+  //   say        a character a device voice reads back as that sound
+  //   tip        how to make the sound with your mouth
+  //   words      example words that contain the symbol
+  //   soundQuiz  false = leave out of the listening quizzes (see soundNote)
+  const SYMBOLS = [
+    // ---- Initials (21) ----
+    { z:'ㄅ', kind:'initial', name:'ㄅㄛ', say:'波', tip:'Close your lips, then let go gently. Little or no puff of air.',
+      words:[ w('爸爸','ㄅㄚˋ ˙ㄅㄚ','bà ba','dad'), w('杯子','ㄅㄟ ˙ㄗ','bēi zi','cup'), w('筆','ㄅㄧˇ','bǐ','pen') ] },
+    { z:'ㄆ', kind:'initial', name:'ㄆㄛ', say:'坡', tip:'Same lips as ㄅ, but with a strong puff of air. A tissue held in front of your mouth should flutter.',
+      words:[ w('朋友','ㄆㄥˊ ㄧㄡˇ','péng yǒu','friend'), w('蘋果','ㄆㄧㄥˊ ㄍㄨㄛˇ','píng guǒ','apple'), w('盤子','ㄆㄢˊ ˙ㄗ','pán zi','plate') ] },
+    { z:'ㄇ', kind:'initial', name:'ㄇㄛ', say:'摸', tip:'Lips closed, with your voice humming through your nose.',
+      words:[ w('媽媽','ㄇㄚ ˙ㄇㄚ','mā ma','mom'), w('貓','ㄇㄠ','māo','cat'), w('米飯','ㄇㄧˇ ㄈㄢˋ','mǐ fàn','rice') ] },
+    { z:'ㄈ', kind:'initial', name:'ㄈㄛ', say:'佛', tip:'Your upper teeth touch your lower lip while you push air through.',
+      words:[ w('飛機','ㄈㄟ ㄐㄧ','fēi jī','airplane'), w('飯','ㄈㄢˋ','fàn','meal, cooked rice'), w('風','ㄈㄥ','fēng','wind') ] },
+    { z:'ㄉ', kind:'initial', name:'ㄉㄜ', say:'德', tip:'Tap your tongue tip on the ridge behind your upper teeth. Little or no puff of air.',
+      words:[ w('大','ㄉㄚˋ','dà','big'), w('豆腐','ㄉㄡˋ ˙ㄈㄨ','dòu fu','tofu'), w('燈','ㄉㄥ','dēng','lamp') ] },
+    { z:'ㄊ', kind:'initial', name:'ㄊㄜ', say:'特', tip:'Same tongue position as ㄉ, but with a strong puff of air.',
+      words:[ w('他','ㄊㄚ','tā','he, him'), w('太陽','ㄊㄞˋ ㄧㄤˊ','tài yáng','sun'), w('頭','ㄊㄡˊ','tóu','head') ] },
+    { z:'ㄋ', kind:'initial', name:'ㄋㄜ', say:'訥', tip:'Tongue tip on the ridge behind your upper teeth, with your voice going through your nose.',
+      words:[ w('你','ㄋㄧˇ','nǐ','you'), w('牛奶','ㄋㄧㄡˊ ㄋㄞˇ','niú nǎi','milk'), w('鳥','ㄋㄧㄠˇ','niǎo','bird') ] },
+    { z:'ㄌ', kind:'initial', name:'ㄌㄜ', say:'勒', tip:'Tongue tip on the ridge behind your upper teeth, with air flowing around the sides of your tongue.',
+      words:[ w('老師','ㄌㄠˇ ㄕ','lǎo shī','teacher'), w('來','ㄌㄞˊ','lái','to come'), w('六','ㄌㄧㄡˋ','liù','six') ] },
+    { z:'ㄍ', kind:'initial', name:'ㄍㄜ', say:'哥', tip:'The back of your tongue lifts to the soft palate, then lets go. Little or no puff of air.',
+      words:[ w('哥哥','ㄍㄜ ˙ㄍㄜ','gē ge','older brother'), w('狗','ㄍㄡˇ','gǒu','dog'), w('高','ㄍㄠ','gāo','tall') ] },
+    { z:'ㄎ', kind:'initial', name:'ㄎㄜ', say:'科', tip:'Same as ㄍ, but with a strong puff of air.',
+      words:[ w('看','ㄎㄢˋ','kàn','to look'), w('咖啡','ㄎㄚ ㄈㄟ','kā fēi','coffee'), w('口','ㄎㄡˇ','kǒu','mouth') ] },
+    { z:'ㄏ', kind:'initial', name:'ㄏㄜ', say:'喝', tip:'Breathe out through the back of your throat, with a slightly rough, airy sound.',
+      words:[ w('好','ㄏㄠˇ','hǎo','good'), w('黑','ㄏㄟ','hēi','black'), w('火車','ㄏㄨㄛˇ ㄔㄜ','huǒ chē','train') ] },
+    { z:'ㄐ', kind:'initial', name:'ㄐㄧ', say:'雞', tip:'Rest your tongue tip behind your lower teeth and raise the flat of your tongue toward the roof of your mouth. Lips spread, little or no puff of air. Always followed by ㄧ or ㄩ.',
+      words:[ w('家','ㄐㄧㄚ','jiā','home'), w('九','ㄐㄧㄡˇ','jiǔ','nine'), w('今天','ㄐㄧㄣ ㄊㄧㄢ','jīn tiān','today') ] },
+    { z:'ㄑ', kind:'initial', name:'ㄑㄧ', say:'七', tip:'Same as ㄐ, but with a strong puff of air. Always followed by ㄧ or ㄩ.',
+      words:[ w('七','ㄑㄧ','qī','seven'), w('錢','ㄑㄧㄢˊ','qián','money'), w('去','ㄑㄩˋ','qù','to go') ] },
+    { z:'ㄒ', kind:'initial', name:'ㄒㄧ', say:'西', tip:'Tongue tip behind your lower teeth, the flat of your tongue near the roof of your mouth, and air hissing through. Lips spread. Always followed by ㄧ or ㄩ.',
+      words:[ w('謝謝','ㄒㄧㄝˋ ˙ㄒㄧㄝ','xiè xie','thank you'), w('小','ㄒㄧㄠˇ','xiǎo','small'), w('學校','ㄒㄩㄝˊ ㄒㄧㄠˋ','xué xiào','school') ] },
+    { z:'ㄓ', kind:'initial', name:'ㄓ', say:'知', tip:'Curl your tongue tip back toward the roof of your mouth, then let go. Little or no puff of air. Can stand alone as a whole syllable.',
+      words:[ w('中國','ㄓㄨㄥ ㄍㄨㄛˊ','zhōng guó','China'), w('這','ㄓㄜˋ','zhè','this'), w('紙','ㄓˇ','zhǐ','paper') ] },
+    { z:'ㄔ', kind:'initial', name:'ㄔ', say:'吃', tip:'Same as ㄓ, but with a strong puff of air. Can stand alone as a whole syllable.',
+      words:[ w('吃','ㄔ','chī','to eat'), w('茶','ㄔㄚˊ','chá','tea'), w('車','ㄔㄜ','chē','car') ] },
+    { z:'ㄕ', kind:'initial', name:'ㄕ', say:'詩', tip:'Curl your tongue tip back and let air hiss through. Can stand alone as a whole syllable.',
+      words:[ w('是','ㄕˋ','shì','to be'), w('書','ㄕㄨ','shū','book'), w('水','ㄕㄨㄟˇ','shuǐ','water') ] },
+    { z:'ㄖ', kind:'initial', name:'ㄖ', say:'日', tip:'Same tongue position as ㄕ, but with your voice buzzing. Can stand alone as a whole syllable.',
+      words:[ w('日本','ㄖˋ ㄅㄣˇ','rì běn','Japan'), w('人','ㄖㄣˊ','rén','person'), w('肉','ㄖㄡˋ','ròu','meat') ] },
+    { z:'ㄗ', kind:'initial', name:'ㄗ', say:'資', tip:'Tongue tip just behind your upper teeth, then let go. Little or no puff of air. Can stand alone as a whole syllable.',
+      words:[ w('早安','ㄗㄠˇ ㄢ','zǎo ān','good morning'), w('在','ㄗㄞˋ','zài','to be at'), w('走','ㄗㄡˇ','zǒu','to walk') ] },
+    { z:'ㄘ', kind:'initial', name:'ㄘ', say:'次', tip:'Same as ㄗ, but with a strong puff of air. Can stand alone as a whole syllable.',
+      words:[ w('菜','ㄘㄞˋ','cài','dish, vegetable'), w('草','ㄘㄠˇ','cǎo','grass'), w('聰明','ㄘㄨㄥ ㄇㄧㄥˊ','cōng míng','clever') ] },
+    { z:'ㄙ', kind:'initial', name:'ㄙ', say:'絲', tip:'Tongue tip near your upper teeth, with air hissing through. Can stand alone as a whole syllable.',
+      words:[ w('三','ㄙㄢ','sān','three'), w('四','ㄙˋ','sì','four'), w('傘','ㄙㄢˇ','sǎn','umbrella') ] },
+
+    // ---- Medials (3) ----
+    { z:'ㄧ', kind:'medial', name:'ㄧ', say:'衣', tip:'Lips spread, tongue high and forward.',
+      words:[ w('一','ㄧ','yī','one'), w('衣服','ㄧ ˙ㄈㄨ','yī fu','clothes'), w('椅子','ㄧˇ ˙ㄗ','yǐ zi','chair') ] },
+    { z:'ㄨ', kind:'medial', name:'ㄨ', say:'屋', tip:'Lips rounded and pushed forward, tongue pulled back.',
+      words:[ w('五','ㄨˇ','wǔ','five'), w('我','ㄨㄛˇ','wǒ','I, me'), w('屋子','ㄨ ˙ㄗ','wū zi','room') ] },
+    { z:'ㄩ', kind:'medial', name:'ㄩ', say:'魚', tip:'Say ㄧ, then round your lips without moving your tongue.',
+      words:[ w('魚','ㄩˊ','yú','fish'), w('雨','ㄩˇ','yǔ','rain'), w('月亮','ㄩㄝˋ ˙ㄌㄧㄤ','yuè liang','moon') ] },
+
+    // ---- Finals (13) ----
+    { z:'ㄚ', kind:'final', name:'ㄚ', say:'啊', tip:'Mouth wide open, tongue low and flat.',
+      words:[ w('馬','ㄇㄚˇ','mǎ','horse'), w('八','ㄅㄚ','bā','eight'), w('拿','ㄋㄚˊ','ná','to take') ] },
+    { z:'ㄛ', kind:'final', name:'ㄛ', say:'喔', tip:'Lips rounded, mouth half open, tongue pulled back.',
+      words:[ w('我','ㄨㄛˇ','wǒ','I, me'), w('多','ㄉㄨㄛ','duō','many'), w('波','ㄅㄛ','bō','wave') ] },
+    { z:'ㄜ', kind:'final', name:'ㄜ', say:'鵝', tip:'Mouth half open with relaxed lips, tongue pulled back.',
+      words:[ w('這','ㄓㄜˋ','zhè','this'), w('喝','ㄏㄜ','hē','to drink'), w('可以','ㄎㄜˇ ㄧˇ','kě yǐ','can, may') ] },
+    { z:'ㄝ', kind:'final', name:'ㄝ', say:'耶', tip:'Mouth half open, lips spread, tongue forward. You will mostly meet it inside ㄧㄝ and ㄩㄝ.',
+      soundQuiz:false, soundNote:'Device voices cannot say ㄝ on its own, so the button plays ㄧㄝ. Listen for the ending.',
+      words:[ w('月','ㄩㄝˋ','yuè','moon'), w('謝謝','ㄒㄧㄝˋ ˙ㄒㄧㄝ','xiè xie','thank you'), w('夜','ㄧㄝˋ','yè','night') ] },
+    { z:'ㄞ', kind:'final', name:'ㄞ', say:'哀', tip:'Start with ㄚ and glide up toward ㄧ.',
+      words:[ w('愛','ㄞˋ','ài','love'), w('來','ㄌㄞˊ','lái','to come'), w('白','ㄅㄞˊ','bái','white') ] },
+    { z:'ㄟ', kind:'final', name:'ㄟ', say:'黑', tip:'Start with ㄝ and glide up toward ㄧ.',
+      soundQuiz:false, soundNote:'Device voices cannot say ㄟ on its own, so the button plays 黑 (ㄏㄟ). Listen for the ending.',
+      words:[ w('黑','ㄏㄟ','hēi','black'), w('美','ㄇㄟˇ','měi','beautiful'), w('杯子','ㄅㄟ ˙ㄗ','bēi zi','cup') ] },
+    { z:'ㄠ', kind:'final', name:'ㄠ', say:'傲', tip:'Start with ㄚ and glide toward ㄨ.',
+      words:[ w('高','ㄍㄠ','gāo','tall'), w('好','ㄏㄠˇ','hǎo','good'), w('草','ㄘㄠˇ','cǎo','grass') ] },
+    { z:'ㄡ', kind:'final', name:'ㄡ', say:'歐', tip:'Start with ㄛ and glide toward ㄨ.',
+      words:[ w('頭','ㄊㄡˊ','tóu','head'), w('狗','ㄍㄡˇ','gǒu','dog'), w('走','ㄗㄡˇ','zǒu','to walk') ] },
+    { z:'ㄢ', kind:'final', name:'ㄢ', say:'安', tip:'Open your mouth for ㄚ, then finish with your tongue tip pressed behind your upper teeth.',
+      words:[ w('山','ㄕㄢ','shān','mountain'), w('三','ㄙㄢ','sān','three'), w('飯','ㄈㄢˋ','fàn','meal') ] },
+    { z:'ㄣ', kind:'final', name:'ㄣ', say:'恩', tip:'A relaxed middle vowel, then finish with your tongue tip pressed behind your upper teeth.',
+      words:[ w('很','ㄏㄣˇ','hěn','very'), w('人','ㄖㄣˊ','rén','person'), w('今天','ㄐㄧㄣ ㄊㄧㄢ','jīn tiān','today') ] },
+    { z:'ㄤ', kind:'final', name:'ㄤ', say:'昂', tip:'Open your mouth for ㄚ, then finish by lifting the back of your tongue, with your mouth still open.',
+      words:[ w('忙','ㄇㄤˊ','máng','busy'), w('湯','ㄊㄤ','tāng','soup'), w('想','ㄒㄧㄤˇ','xiǎng','to think, to want') ] },
+    { z:'ㄥ', kind:'final', name:'ㄥ', say:'亨', tip:'A relaxed middle vowel, then finish by lifting the back of your tongue.',
+      soundQuiz:false, soundNote:'Device voices cannot say ㄥ on its own, so the button plays ㄏㄥ. Listen for the ending.',
+      words:[ w('風','ㄈㄥ','fēng','wind'), w('燈','ㄉㄥ','dēng','lamp'), w('朋友','ㄆㄥˊ ㄧㄡˇ','péng yǒu','friend') ] },
+    { z:'ㄦ', kind:'final', name:'ㄦ', say:'兒', tip:'Make a relaxed vowel while curling your tongue tip back.',
+      words:[ w('二','ㄦˋ','èr','two'), w('兒子','ㄦˊ ˙ㄗ','ér zi','son'), w('耳朵','ㄦˇ ˙ㄉㄨㄛ','ěr duo','ear') ] },
+  ];
+
+  // The five tones. Marks 2 to 4 go after the syllable; the neutral dot goes before it.
+  // The first word of each tone is the "ma" word used to compare all five.
+  const TONES = [
+    { id:'tone-1', n:1, mark:'ˉ', name:'First tone',   label:'1st',   place:'Written with no mark.',             desc:'High and level, like holding a sung note.',
+      words:[ w('媽','ㄇㄚ','mā','mom'), w('今天','ㄐㄧㄣ ㄊㄧㄢ','jīn tiān','today'), w('風','ㄈㄥ','fēng','wind') ] },
+    { id:'tone-2', n:2, mark:'ˊ', name:'Second tone',  label:'2nd',   place:'The mark goes after the syllable.', desc:'Rising, like the “Huh?” you say when you did not hear something.',
+      words:[ w('麻','ㄇㄚˊ','má','hemp'), w('人','ㄖㄣˊ','rén','person'), w('錢','ㄑㄧㄢˊ','qián','money') ] },
+    { id:'tone-3', n:3, mark:'ˇ', name:'Third tone',   label:'3rd',   place:'The mark goes after the syllable.', desc:'Dips low, then rises. In fast speech it is often just the low dip.',
+      words:[ w('馬','ㄇㄚˇ','mǎ','horse'), w('好','ㄏㄠˇ','hǎo','good'), w('水','ㄕㄨㄟˇ','shuǐ','water') ] },
+    { id:'tone-4', n:4, mark:'ˋ', name:'Fourth tone',  label:'4th',   place:'The mark goes after the syllable.', desc:'A sharp fall, like a firm “No!”',
+      words:[ w('罵','ㄇㄚˋ','mà','to scold'), w('大','ㄉㄚˋ','dà','big'), w('愛','ㄞˋ','ài','love') ] },
+    { id:'tone-5', n:5, mark:'˙', name:'Neutral tone', label:'light', place:'The dot goes before the syllable.', desc:'Light and short, with no tone of its own.',
+      words:[ w('嗎','˙ㄇㄚ','ma','question particle'), w('爸爸','ㄅㄚˋ ˙ㄅㄚ','bà ba','dad'), w('杯子','ㄅㄟ ˙ㄗ','bēi zi','cup') ] },
+  ];
+
+  // Words for the Words tab (hear a word sounded out) and Build mode (dictation: hear the word, then spell it). Each row is:
+  //   [character, initial, medial, final, tone (1-5), pinyin (never shown), meaning]
+  // Leave a part as '' when the syllable does not have it. Tone 5 is the neutral tone.
+  // Single characters that device voices often misread on their own (like 的 and 了) are left out.
+  const WORDS = [
+    ['你','ㄋ','ㄧ','',3,'nǐ','you'],
+    ['好','ㄏ','','ㄠ',3,'hǎo','good'],
+    ['我','','ㄨ','ㄛ',3,'wǒ','I, me'],
+    ['他','ㄊ','','ㄚ',1,'tā','he, him'],
+    ['是','ㄕ','','',4,'shì','to be'],
+    ['不','ㄅ','ㄨ','',4,'bù','not'],
+    ['嗎','ㄇ','','ㄚ',5,'ma','question particle'],
+    ['們','ㄇ','','ㄣ',5,'men','plural ending'],
+    ['人','ㄖ','','ㄣ',2,'rén','person'],
+    ['大','ㄉ','','ㄚ',4,'dà','big'],
+    ['小','ㄒ','ㄧ','ㄠ',3,'xiǎo','small'],
+    ['中','ㄓ','ㄨ','ㄥ',1,'zhōng','middle'],
+    ['國','ㄍ','ㄨ','ㄛ',2,'guó','country'],
+    ['學','ㄒ','ㄩ','ㄝ',2,'xué','to study'],
+    ['水','ㄕ','ㄨ','ㄟ',3,'shuǐ','water'],
+    ['火','ㄏ','ㄨ','ㄛ',3,'huǒ','fire'],
+    ['山','ㄕ','','ㄢ',1,'shān','mountain'],
+    ['月','','ㄩ','ㄝ',4,'yuè','moon'],
+    ['日','ㄖ','','',4,'rì','sun, day'],
+    ['一','','ㄧ','',1,'yī','one'],
+    ['二','','','ㄦ',4,'èr','two'],
+    ['三','ㄙ','','ㄢ',1,'sān','three'],
+    ['四','ㄙ','','',4,'sì','four'],
+    ['五','','ㄨ','',3,'wǔ','five'],
+    ['六','ㄌ','ㄧ','ㄡ',4,'liù','six'],
+    ['七','ㄑ','ㄧ','',1,'qī','seven'],
+    ['八','ㄅ','','ㄚ',1,'bā','eight'],
+    ['九','ㄐ','ㄧ','ㄡ',3,'jiǔ','nine'],
+    ['十','ㄕ','','',2,'shí','ten'],
+    ['爸','ㄅ','','ㄚ',4,'bà','dad'],
+    ['媽','ㄇ','','ㄚ',1,'mā','mom'],
+    ['愛','','','ㄞ',4,'ài','love'],
+    ['謝','ㄒ','ㄧ','ㄝ',4,'xiè','to thank'],
+    ['吃','ㄔ','','',1,'chī','to eat'],
+    ['喝','ㄏ','','ㄜ',1,'hē','to drink'],
+    ['看','ㄎ','','ㄢ',4,'kàn','to look'],
+    ['說','ㄕ','ㄨ','ㄛ',1,'shuō','to speak'],
+    ['家','ㄐ','ㄧ','ㄚ',1,'jiā','home'],
+    ['魚','','ㄩ','',2,'yú','fish'],
+    ['貓','ㄇ','','ㄠ',1,'māo','cat'],
+    ['狗','ㄍ','','ㄡ',3,'gǒu','dog'],
+    ['茶','ㄔ','','ㄚ',2,'chá','tea'],
+    ['錢','ㄑ','ㄧ','ㄢ',2,'qián','money'],
+    ['友','','ㄧ','ㄡ',3,'yǒu','friend'],
+    ['天','ㄊ','ㄧ','ㄢ',1,'tiān','sky, day'],
+    ['年','ㄋ','ㄧ','ㄢ',2,'nián','year'],
+    ['很','ㄏ','','ㄣ',3,'hěn','very'],
+    ['忙','ㄇ','','ㄤ',2,'máng','busy'],
+    ['風','ㄈ','','ㄥ',1,'fēng','wind'],
+    ['菜','ㄘ','','ㄞ',4,'cài','dish, vegetable'],
+    ['早','ㄗ','','ㄠ',3,'zǎo','early'],
+    ['飛','ㄈ','','ㄟ',1,'fēi','to fly'],
+    ['黑','ㄏ','','ㄟ',1,'hēi','black'],
+    ['高','ㄍ','','ㄠ',1,'gāo','tall'],
+    ['頭','ㄊ','','ㄡ',2,'tóu','head'],
+    ['口','ㄎ','','ㄡ',3,'kǒu','mouth'],
+    ['馬','ㄇ','','ㄚ',3,'mǎ','horse'],
+    ['書','ㄕ','ㄨ','',1,'shū','book'],
+    ['來','ㄌ','','ㄞ',2,'lái','to come'],
+    ['去','ㄑ','ㄩ','',4,'qù','to go'],
+    ['這','ㄓ','','ㄜ',4,'zhè','this'],
+    ['那','ㄋ','','ㄚ',4,'nà','that'],
+    ['在','ㄗ','','ㄞ',4,'zài','to be at'],
+    ['見','ㄐ','ㄧ','ㄢ',4,'jiàn','to see'],
+    ['對','ㄉ','ㄨ','ㄟ',4,'duì','correct'],
+    ['沒','ㄇ','','ㄟ',2,'méi','not have'],
+    ['想','ㄒ','ㄧ','ㄤ',3,'xiǎng','to want, to think'],
+    ['要','','ㄧ','ㄠ',4,'yào','to want'],
+    // Added so every symbol appears in at least three words, which is what it takes to fill its three dots.
+    ['怕','ㄆ','','ㄚ',4,'pà','to be afraid'],
+    ['跑','ㄆ','','ㄠ',3,'pǎo','to run'],
+    ['皮','ㄆ','ㄧ','',2,'pí','skin'],
+    ['飯','ㄈ','','ㄢ',4,'fàn','meal, cooked rice'],
+    ['房','ㄈ','','ㄤ',2,'fáng','room, house'],
+    ['多','ㄉ','ㄨ','ㄛ',1,'duō','many'],
+    ['冷','ㄌ','','ㄥ',3,'lěng','cold'],
+    ['渴','ㄎ','','ㄜ',3,'kě','thirsty'],
+    ['找','ㄓ','','ㄠ',3,'zhǎo','to look for'],
+    ['車','ㄔ','','ㄜ',1,'chē','car'],
+    ['熱','ㄖ','','ㄜ',4,'rè','hot'],
+    ['走','ㄗ','','ㄡ',3,'zǒu','to walk'],
+    ['草','ㄘ','','ㄠ',3,'cǎo','grass'],
+    ['錯','ㄘ','ㄨ','ㄛ',4,'cuò','wrong'],
+    ['酸','ㄙ','ㄨ','ㄢ',1,'suān','sour'],
+    ['兒','','','ㄦ',2,'ér','child'],
+    ['耳','','','ㄦ',3,'ěr','ear'],
+    ['上','ㄕ','','ㄤ',4,'shàng','up, on'],
+  ].map(([c, i, m, f, t, py, en]) => ({ c, i, m, f, t, py, en }));
+
+  // How the chart groups the symbols on screen.
+  const GROUPS = [
+    { kind:'initial', title:'Initials', note:'Consonants that start a syllable, grouped by how your mouth makes them.', subgroups:[
+      { label:'Lips',                syms:'ㄅㄆㄇㄈ' },
+      { label:'Tongue tip',          syms:'ㄉㄊㄋㄌ' },
+      { label:'Back of tongue',      syms:'ㄍㄎㄏ' },
+      { label:'Tongue tip down',     syms:'ㄐㄑㄒ' },
+      { label:'Tongue tip curled',   syms:'ㄓㄔㄕㄖ' },
+      { label:'Tongue tip forward',  syms:'ㄗㄘㄙ' },
+    ]},
+    { kind:'medial', title:'Medials', note:'Glides that sit between an initial and a final. Each can also stand alone as a whole syllable.', subgroups:[
+      { label:'', syms:'ㄧㄨㄩ' },
+    ]},
+    { kind:'final', title:'Finals', note:'The vowel or nasal ending of a syllable.', subgroups:[
+      { label:'Single vowels',      syms:'ㄚㄛㄜㄝ' },
+      { label:'Vowel pairs',        syms:'ㄞㄟㄠㄡ' },
+      { label:'Ending in n or ng',  syms:'ㄢㄣㄤㄥ' },
+      { label:'R sound',            syms:'ㄦ' },
+    ]},
+  ];
+
+  const TONE_MARK = { 1:'', 2:'ˊ', 3:'ˇ', 4:'ˋ', 5:'˙' };
+  const KIND_NOTE = {
+    initial: 'Initial: starts a syllable.',
+    medial:  'Medial: sits in the middle of a syllable, or stands alone.',
+    final:   'Final: ends a syllable.',
+  };
+  const FILTERS = [['all','All'], ['initial','Initials'], ['medial','Medials'], ['final','Finals']];
+  const QUIZ_MODES = [['hear','Hear it, pick the symbol'], ['see','See it, pick the sound'], ['mixed','Mixed']];
+  const QUIZ_MODE_NOTE = {
+    hear:  'You hear a sound and choose the symbol that makes it.',
+    see:   'You see a symbol and choose which of four sounds belongs to it.',
+    mixed: 'A mix of both: sometimes you hear and pick the symbol, sometimes you see and pick the sound.',
+  };
+
+  const QUIZ_LENGTH = 10;     // questions per quiz
+  const MAX_LEVEL = 3;        // 0 = new, 3 = mastered
+  const STORAGE_KEY = 'zhuyin-trainer-v1';
+
+  /* =======================================================================
+     ===== 2. HELPERS
+     ======================================================================= */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  // True on a phone-sized screen, where some explanatory text starts folded away to save room.
+  const phoneLayout = () => typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches;
+  const zh = (text, cls = '') => `<span lang="zh-Hant-TW"${cls ? ` class="${cls}"` : ''}>${text}</span>`;
+  const bySymbol = Object.fromEntries(SYMBOLS.map((s) => [s.z, s]));
+  const inFilter = (f) => (s) => f === 'all' || s.kind === f;
+  const ELIGIBLE = SYMBOLS.filter((s) => s.soundQuiz !== false);       // symbols a device voice can say on their own
+  const soundPool = (filter) => ELIGIBLE.filter(inFilter(filter));
+
+  function shuffle(list) {
+    const a = [...list];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Put the parts of a syllable together the way they are written.
+  function compose(i, m, f, t) {
+    const core = (i || '') + (m || '') + (f || '');
+    return t === 5 ? '˙' + core : core + (TONE_MARK[t] || '');
+  }
+
+  // Zhuyin symbols inside English sentences get the Chinese language tag too,
+  // so they use the right font and glyph shapes instead of the English UI font.
+  const withZh = (text) => text.replace(/[ㄅ-ㄯ]+/g, (run) => zh(run));
+
+  // Wrap every character of `zy` that appears in `chars` in a highlight.
+  const highlight = (zy, chars) => (chars ? [...zy].map((ch) => (chars.includes(ch) ? `<b class="hl">${ch}</b>` : ch)).join('') : zy);
+
+  // Sound that plays when the learner taps a chart item.
+  function chartSpeech(id) {
+    const tone = TONES.find((t) => t.id === id);
+    return tone ? tone.words[0].c : bySymbol[id].say;
+  }
+
+  /* =======================================================================
+     ===== 3. PROGRESS (saved in this browser only)
+     Each symbol has a level from 0 (new) to 3 (mastered).
+     ======================================================================= */
+  let progress = loadProgress();
+
+  function loadProgress() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch { return {}; }
+  }
+  function saveProgress() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }
+    catch { /* storage can be unavailable, for example in private windows */ }
+  }
+  const level = (z) => progress[z] || 0;
+  function setLevel(z, n) {
+    progress[z] = Math.max(0, Math.min(MAX_LEVEL, n));
+    saveProgress();
+  }
+  const masteredCount = () => SYMBOLS.filter((s) => level(s.z) >= MAX_LEVEL).length;
+
+  /* =======================================================================
+     ===== 4. AUDIO (the browser's built-in text-to-speech)
+     Every sound on the page is a Chinese character or word read aloud by the
+     device's Mandarin voice. Voices vary, so the page says so when none is found.
+     To use real recordings later, replace say() and sayMany() with code that
+     plays your audio files.
+     ======================================================================= */
+  // The pause between symbols in Sound it out. A plain space is shortest, '、' a little longer,
+  // '，' longer still. (Playing each symbol as its own utterance gives the longest gap, which is too long.)
+  const SOUND_GAP = '、';
+
+  const audio = {
+    supported: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+    voice: null,
+    init() {
+      if (!this.supported) return;
+      const pick = () => {
+        const had = !!this.voice;
+        const voices = speechSynthesis.getVoices();
+        this.voice = voices.find((v) => /^zh[-_]TW$/i.test(v.lang)) || voices.find((v) => /^zh/i.test(v.lang)) || null;
+        const detail = $('.detail');   // not on the page yet if voices are ready at load, so check first
+        if (had !== !!this.voice && state.view === 'chart' && detail) detail.innerHTML = detailHtml(state.chart.selected);
+      };
+      pick();
+      speechSynthesis.addEventListener('voiceschanged', pick);
+    },
+    utter(text) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-TW';
+      if (this.voice) u.voice = this.voice;
+      u.rate = 0.8;
+      return u;
+    },
+    say(text) {
+      if (!this.supported) return;
+      try {   // a speech failure must never break the page
+        speechSynthesis.cancel();
+        speechSynthesis.speak(this.utter(text));
+      } catch (e) { /* no sound is better than a broken quiz */ }
+    },
+    // Several sounds as ONE utterance, with a short pause between them (see SOUND_GAP). Queued utterances
+    // leave a clear, uneven gap on most voices; one utterance gives a steadier, shorter one.
+    sayTogether(texts) {
+      this.say(texts.join(SOUND_GAP));
+    },
+    sayMany(texts) {
+      if (!this.supported) return;
+      try {
+        speechSynthesis.cancel();
+        texts.forEach((t) => speechSynthesis.speak(this.utter(t)));
+      } catch (e) { /* see say() */ }
+    },
+    note() {
+      if (!this.supported) return 'This browser cannot play audio.';
+      if (!this.voice) return 'No Mandarin voice found on this device, so audio may not play.';
+      return '';
+    },
+  };
+
+  // Browsers only allow sound right after a click. Handlers call queueSpeech(),
+  // and the click listener plays it once the handler has finished.
+  let pendingSpeech = null;
+  const queueSpeech = (text) => { pendingSpeech = text; };
+
+  /* =======================================================================
+     ===== 5. STATE
+     ======================================================================= */
+  const freshQuiz = (filter = 'all', mode = 'hear') => ({ filter, mode, questions: [], index: 0, score: 0, answered: null, missed: [], done: false });
+
+  const state = {
+    view: 'chart',
+    chart: { selected: 'ㄅ', open: false },   // open: the bottom sheet on phones (the desktop panel is always showing)
+    cards: { filter: 'all', current: null, flipped: false },
+    quiz: freshQuiz(),
+    build: { word: null, sel: { i: '', m: '', f: '', t: null }, result: null, missed: false, streak: 0, bag: [], helpOpen: false },
+  };
+
+  /* =======================================================================
+     ===== 6. SHARED PIECES OF MARKUP
+     ======================================================================= */
+
+  const speakerIcon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+
+  // A button that plays `text`. `label` may contain markup. `compact` = icon only.
+  function hearButton(text, { label = 'Hear it', primary = false, compact = false } = {}) {
+    if (!audio.supported) return '';
+    return `<button class="btn ${primary ? 'btn--primary' : 'btn--quiet'}${compact ? ' btn--icon' : ''}" data-act="say" data-text="${text}"${compact ? ` aria-label="Hear ${text}"` : ''}>${speakerIcon}${compact ? '' : label}</button>`;
+  }
+
+  function wordRow(wd, highlightChars) {
+    return `<li class="word-row">
+      ${zh(wd.c, 'wr-char')}
+      <div class="wr-body">
+        <div class="wr-zy">${zh(highlight(wd.z, highlightChars))}</div>
+        <div class="wr-en">${wd.en}</div>
+      </div>
+      ${hearButton(wd.c, { compact: true })}
+    </li>`;
+  }
+
+  function filterBar(mode) {
+    return `<div class="segmented" role="group" aria-label="Which symbols to practise">
+      ${FILTERS.map(([v, label]) => `<button data-act="filter" data-mode="${mode}" data-value="${v}" data-key="filter-${mode}-${v}" aria-pressed="${state[mode].filter === v}">${label}</button>`).join('')}
+    </div>`;
+  }
+
+  /* =======================================================================
+     ===== 7. VIEWS
+     Each view returns an HTML string; render() puts it on the page.
+     ======================================================================= */
+
+  /* ---- Chart ---- */
+  const pips = (z) => `<span class="pips" aria-hidden="true">${[1, 2, 3].map((n) => `<i class="${level(z) >= n ? 'on' : ''}"></i>`).join('')}</span>`;
+
+  function symButton(s, selected) {
+    const spoken = s.name !== s.z ? `, read as ${s.name}` : '';
+    return `<button class="sym" data-act="pick" data-id="${s.z}" aria-pressed="${selected === s.z}" aria-label="${s.z}${spoken}, progress ${level(s.z)} of ${MAX_LEVEL}">
+      <span class="tian">${zh(s.z)}${pips(s.z)}</span>
+    </button>`;
+  }
+
+  function toneButton(t, selected) {
+    return `<button class="sym" data-act="pick" data-id="${t.id}" aria-pressed="${selected === t.id}" aria-label="${t.name}">
+      <span class="tian">${zh(t.mark)}</span>
+      <span class="sym-name">${t.label}</span>
+    </button>`;
+  }
+
+  function symbolDetail(s) {
+    const note = audio.note();
+    return `<div class="detail-card">
+      <h2 class="sr">${zh(s.z)}</h2>
+      <div class="detail-tile"><span class="tian tian--hero">${zh(s.z)}${pips(s.z)}</span></div>
+      <div class="sound-line">
+        ${hearButton(s.say, { label: `Hear ${zh(s.z)}`, primary: true })}
+      </div>
+      <p class="kind">${KIND_NOTE[s.kind]}</p>
+      <p class="hint">${withZh(s.tip)}</p>
+      ${s.soundNote ? `<p class="small-note">${withZh(s.soundNote)}</p>` : ''}
+      <h3 class="words-title">Words with ${zh(s.z)}</h3>
+      <ul class="word-list">${s.words.map((x) => wordRow(x, s.z)).join('')}</ul>
+      ${note ? `<p class="small-note">${note}</p>` : ''}
+    </div>`;
+  }
+
+  function toneDetail(t) {
+    const note = audio.note();
+    const compare = audio.supported ? '<button class="btn btn--quiet" data-act="say-tones">Compare all five tones</button>' : '';
+    return `<div class="detail-card">
+      <div class="detail-tile"><span class="tian tian--hero" style="--fs:.36">${zh(t.words[0].z)}</span></div>
+      <h2>${t.name}</h2>
+      <div class="sound-line">${hearButton(t.words[0].c, { label: 'Hear this tone', primary: true })}${compare}</div>
+      <p class="kind">${t.place}</p>
+      <p class="hint">${t.desc}</p>
+      <h3 class="words-title">Words with this tone</h3>
+      <ul class="word-list">${t.words.map((x) => wordRow(x, t.n > 1 ? t.mark : '')).join('')}</ul>
+      ${note ? `<p class="small-note">${note}</p>` : ''}
+    </div>`;
+  }
+
+  // Handle and Close button for the phone bottom sheet (hidden by CSS on wide screens)
+  const SHEET_BAR = '<div class="sheet-bar"><span class="sheet-grip" aria-hidden="true"></span><button class="sheet-close" data-act="close-sheet" aria-label="Close details">Close</button></div>';
+
+  function detailHtml(id) {
+    const tone = TONES.find((t) => t.id === id);
+    return SHEET_BAR + (tone ? toneDetail(tone) : symbolDetail(bySymbol[id]));
+  }
+
+  function chartView() {
+    const sel = state.chart.selected;
+    const families = GROUPS.map((g) => `
+      <section class="family">
+        <h3>${g.title}</h3>
+        <p class="note">${g.note}</p>
+        <div class="subgroups">
+          ${g.subgroups.map((sg) => `
+            <div class="subgroup">
+              ${sg.label ? `<p class="subgroup-label">${sg.label}</p>` : ''}
+              <div class="subgroup-items">${[...sg.syms].map((z) => symButton(bySymbol[z], sel)).join('')}</div>
+            </div>`).join('')}
+        </div>
+      </section>`).join('');
+
+    const tones = `
+      <section class="family">
+        <h3>Tones</h3>
+        <p class="note">Mandarin has four tones and a light neutral one. Marks 2 to 4 follow the syllable. The neutral dot comes first.</p>
+        <div class="subgroups"><div class="subgroup"><div class="subgroup-items">${TONES.map((t) => toneButton(t, sel)).join('')}</div></div></div>
+      </section>`;
+
+    return `<h2 class="sr">Symbol chart</h2>
+      <div class="chart">
+        <aside class="detail${state.chart.open ? ' is-open' : ''}" aria-label="Symbol details" aria-live="polite">${detailHtml(sel)}</aside>
+        <div class="symbols">
+          <p class="lede">Tap a symbol to hear it and see words that use it. The dots in a symbol's corner are your progress, earned in Build.</p>
+          ${families}${tones}
+        </div>
+      </div>`;
+  }
+
+  /* ---- Flashcards ---- */
+  function pickCard(filter, avoid) {
+    let pool = SYMBOLS.filter(inFilter(filter));
+    if (pool.length > 1) pool = pool.filter((s) => s.z !== avoid);
+    const weights = [6, 4, 2, 1];                       // new symbols come up most often
+    const total = pool.reduce((sum, s) => sum + weights[level(s.z)], 0);
+    let r = Math.random() * total;
+    for (const s of pool) {
+      r -= weights[level(s.z)];
+      if (r <= 0) return s.z;
+    }
+    return pool[0].z;
+  }
+
+  function cardsView() {
+    const c = state.cards;
+    if (!c.current) c.current = pickCard(c.filter, null);
+    const s = bySymbol[c.current];
+    const body = c.flipped
+      ? `<div class="sound-line">
+           ${hearButton(s.say, { label: 'Hear it again', primary: true })}
+         </div>
+         <p class="kind">${KIND_NOTE[s.kind]}</p>
+         <p class="hint">${withZh(s.tip)}</p>
+         ${s.soundNote ? `<p class="small-note">${withZh(s.soundNote)}</p>` : ''}
+         <h3>Words with ${zh(s.z)}</h3>
+         <ul class="word-list">${s.words.slice(0, 2).map((x) => wordRow(x, s.z)).join('')}</ul>
+         <div class="actions">
+           <button class="btn btn--primary" data-act="next-card" data-autofocus>Next</button>
+         </div>
+         <p class="keys keys--kbd">Keyboard: right arrow for Next.</p>`
+      : `<p class="prompt">Say the sound out loud, then check yourself.</p>
+         <p class="keys">Showing the answer plays the sound.</p>
+         <div class="actions"><button class="btn btn--primary" data-act="flip" data-autofocus>Show answer</button></div>`;
+
+    return `<section aria-labelledby="cards-h">
+      <div class="panel-head"><h2 id="cards-h">Flashcards</h2>${filterBar('cards')}</div>
+      <div class="card">
+        <div class="card-tile"><span class="tian tian--hero">${zh(s.z)}${pips(s.z)}</span></div>
+        <div class="card-body" aria-live="polite">${body}</div>
+      </div>
+    </section>`;
+  }
+
+  function nextCard() {
+    const c = state.cards;
+    const z = c.current;
+    c.flipped = false;
+    c.current = pickCard(c.filter, z);
+    render();
+  }
+
+  /* ---- Quiz: hear a sound and pick the symbol, or see a symbol and pick the sound ---- */
+  function makeQuestion(s, mode) {
+    const same = shuffle(ELIGIBLE.filter((x) => x.kind === s.kind && x !== s));
+    const other = shuffle(ELIGIBLE.filter((x) => x.kind !== s.kind));
+    const options = shuffle([s, ...[...same, ...other].slice(0, 3)]);
+    const type = mode === 'mixed' ? (Math.random() < 0.5 ? 'hear' : 'see') : mode;
+    return { sym: s, type, options };
+  }
+
+  // A "hear" question starts by playing its sound.
+  function speakQuestion() {
+    const q = state.quiz;
+    const cur = q.questions[q.index];
+    if (cur && cur.type === 'hear') queueSpeech(cur.sym.say);
+  }
+
+  function startQuiz() {
+    const q = state.quiz;
+    const picks = shuffle(soundPool(q.filter)).slice(0, QUIZ_LENGTH);
+    Object.assign(q, { questions: picks.map((s) => makeQuestion(s, q.mode)), index: 0, score: 0, answered: null, missed: [], done: false });
+    speakQuestion();
+    render();
+  }
+
+  function answerQuestion(idx) {
+    const q = state.quiz;
+    if (q.answered !== null) return;
+    const cur = q.questions[q.index];
+    q.answered = idx;
+    if (cur.options[idx] === cur.sym) q.score++;
+    else q.missed.push(cur.sym);
+    render();
+  }
+
+  function nextQuestion() {
+    const q = state.quiz;
+    if (q.index + 1 >= q.questions.length) q.done = true;
+    else { q.index++; q.answered = null; speakQuestion(); }
+    render();
+  }
+
+  function quizIntro() {
+    const q = state.quiz;
+    const pool = soundPool(q.filter);
+    const n = Math.min(QUIZ_LENGTH, pool.length);
+    const left = SYMBOLS.filter(inFilter(q.filter)).filter((s) => s.soundQuiz === false);
+    const modeBar = `<div class="segmented segmented--stack" role="group" aria-label="Quiz type">
+      ${QUIZ_MODES.map(([v, label]) => `<button data-act="quiz-mode" data-value="${v}" data-key="quiz-mode-${v}" aria-pressed="${q.mode === v}">${label}</button>`).join('')}
+    </div>`;
+    return `<section aria-labelledby="quiz-h">
+      <div class="panel-head"><h2 id="quiz-h">Quiz</h2></div>
+      <div class="card card--single"><div class="card-body">
+        <div class="control-row"><span class="control-label">Quiz type</span>${modeBar}</div>
+        <div class="control-row"><span class="control-label">Symbols</span>${filterBar('quiz')}</div>
+        <p>${n} questions. ${QUIZ_MODE_NOTE[q.mode]}</p>
+        ${left.length ? `<p class="small-note">${left.map((s) => zh(s.z)).join(' ')} ${left.length > 1 ? 'are' : 'is'} left out, because device voices cannot say ${left.length > 1 ? 'them' : 'it'} on their own.</p>` : ''}
+        ${audio.supported
+          ? '<div class="actions"><button class="btn btn--primary" data-act="quiz-start" data-autofocus>Start quiz</button></div>'
+          : '<p class="fb-title">This quiz plays sounds, and this browser cannot play audio. Try a current version of Chrome, Edge, Safari or Firefox.</p>'}
+      </div></div>
+    </section>`;
+  }
+
+  function quizQuestionView() {
+    const q = state.quiz;
+    const cur = q.questions[q.index];
+    const s = cur.sym;
+    const answered = q.answered !== null;
+    const correct = answered && cur.options[q.answered] === s;
+    const hear = cur.type === 'hear';
+    const last = q.index + 1 >= q.questions.length;
+    const mark = (o, idx) => (!answered ? '' : o === s ? 'is-correct' : (q.answered === idx ? 'is-wrong' : ''));
+
+    const display = hear
+      ? `<button class="tian tian--hero tian--play" data-act="say" data-text="${s.say}" aria-label="Play the sound again">${speakerIcon}</button>`
+      : `<span class="tian tian--hero">${zh(s.z)}</span>`;
+
+    const options = hear
+      ? `<div class="options">${cur.options.map((o, idx) => `
+          <button class="option ${mark(o, idx)}" data-act="answer" data-index="${idx}" aria-label="Symbol ${o.z}" ${answered ? 'disabled' : ''}>
+            <span class="opt-key" aria-hidden="true">${idx + 1}</span>${zh(o.z, 'opt-zh')}
+          </button>`).join('')}</div>`
+      : `<ul class="sound-options">${cur.options.map((o, idx) => `
+          <li class="sound-opt ${mark(o, idx)}">
+            <button class="btn btn--quiet" data-act="say" data-text="${o.say}" aria-label="Play sound ${idx + 1}">${speakerIcon}Sound ${idx + 1}</button>
+            ${answered ? `<span class="sound-reveal">${zh(o.z)}</span>` : ''}
+            <button class="btn" data-act="answer" data-index="${idx}" aria-label="Choose sound ${idx + 1}" ${answered ? 'disabled' : ''}>This one</button>
+          </li>`).join('')}</ul>`;
+
+    const feedback = answered ? `
+      <div class="feedback ${correct ? 'ok' : 'bad'}" role="status">
+        <p class="fb-title">${correct ? 'Correct' : 'Not quite'}</p>
+        <p>${zh(s.z)}: ${withZh(s.tip)}</p>
+        <div class="actions">
+          ${hearButton(s.say, { label: 'Hear it again' })}
+          <button class="btn btn--primary" data-act="next-q" data-autofocus>${last ? 'See results' : 'Next question'}</button>
+        </div>
+      </div>`
+      : `<p class="keys keys--kbd">${hear ? 'Press 1 to 4 to answer, or R to hear the sound again.' : 'Press 1 to 4 to hear each sound, then choose one.'}</p>`;
+
+    return `<section aria-labelledby="quiz-h">
+      <div class="panel-head">
+        <h2 id="quiz-h">Quiz</h2>
+        <div class="sound-line">
+          <p class="progress">Question ${q.index + 1} of ${q.questions.length}. Score ${q.score}.</p>
+          <button class="btn btn--quiet" data-act="quiz-reset">Stop quiz</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-tile">${display}</div>
+        <div class="card-body">
+          <p class="prompt">${hear ? 'Which symbol makes this sound?' : 'Which sound belongs to this symbol?'}</p>
+          ${options}
+          ${feedback}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  function quizResultView() {
+    const q = state.quiz;
+    const total = q.questions.length;
+    const missed = q.missed.length
+      ? `<h3>Worth another look</h3>
+         <div class="missed">${q.missed.map((s) => `<span class="miss"><span class="tian">${zh(s.z)}</span></span>`).join('')}</div>`
+      : '<p>Every one right.</p>';
+    return `<section aria-labelledby="quiz-h">
+      <div class="panel-head"><h2 id="quiz-h">Quiz results</h2></div>
+      <div class="card card--single"><div class="card-body">
+        <p class="score">${q.score} of ${total}</p>
+        ${missed}
+        <div class="actions">
+          <button class="btn btn--primary" data-act="quiz-start" data-autofocus>Try again</button>
+          ${q.missed.length ? '<button class="btn" data-act="quiz-review">Review missed symbols</button>' : ''}
+          <button class="btn" data-act="quiz-reset">Change quiz</button>
+        </div>
+      </div></div>
+    </section>`;
+  }
+
+  function quizView() {
+    const q = state.quiz;
+    if (!q.questions.length) return quizIntro();
+    return q.done ? quizResultView() : quizQuestionView();
+  }
+
+  /* ---- Words: hear a word, then hear it sounded out one symbol at a time ---- */
+  function wordsView() {
+    // A symbol tile that plays its own sound. Without audio it is just a picture.
+    const tile = (content, text, label) => (audio.supported
+      ? `<button class="pal" data-act="say" data-text="${text}" aria-label="${label}"><span class="tian tian--chip">${zh(content)}</span></button>`
+      : `<span class="pal"><span class="tian tian--chip">${zh(content)}</span></span>`);
+
+    const rows = WORDS.map((wd) => {
+      const symbols = [wd.i, wd.m, wd.f].filter(Boolean);
+      const tone = TONES[wd.t - 1];
+      const tiles = symbols.map((z) => tile(z, bySymbol[z].say, `Hear ${z}`)).join('')
+        + tile(tone.mark, tone.words[0].c, `Hear the ${tone.name.toLowerCase()}`);
+      const sequence = symbols.map((z) => bySymbol[z].say).join('|');   // the symbols only, not the whole word
+      return `<li class="wb">
+        ${zh(wd.c, 'wb-char')}
+        <div class="wb-main">
+          <span class="wb-en">${wd.en}</span>
+          <div class="wb-parts" role="group" aria-label="Sounds in ${wd.c}">${tiles}</div>
+        </div>
+        <div class="wb-actions">
+          ${hearButton(wd.c, { label: 'Hear word' })}
+          ${audio.supported ? `<button class="btn btn--quiet" data-act="say-parts" data-parts="${sequence}">${speakerIcon}Sound it out</button>` : ''}
+        </div>
+      </li>`;
+    }).join('');
+
+    return `<section aria-labelledby="words-h">
+      <div class="panel-head"><h2 id="words-h">Words</h2></div>
+      <div class="words-intro">
+        <p class="lede">The ${WORDS.length} words you meet in Build. Hear a word, or tap Sound it out to hear just its symbols, one by one.</p>
+        ${audio.supported
+          ? `<p class="small-note">${withZh('Each symbol is played the way Taiwan teaches it, so the blend is only approximate. ㄝ ㄟ ㄥ are stand-ins, because device voices cannot say them alone.')}</p>`
+          : `<p class="small-note">${audio.note()}</p>`}
+      </div>
+      <ul class="wb-list">${rows}</ul>
+    </section>`;
+  }
+
+  /* ---- Build: hear a word, then spell it in zhuyin ---- */
+  function nextWord() {
+    const b = state.build;
+    if (!b.bag.length) b.bag = shuffle(WORDS);
+    b.word = b.bag.pop();
+    b.sel = { i: '', m: '', f: '', t: null };
+    b.result = null;
+    b.missed = false;
+    queueSpeech(b.word.c);
+  }
+
+  const buildLocked = (b) => !!(b.result && (b.result.ok || b.result.revealed));
+
+  function place(kind, raw) {
+    const b = state.build;
+    if (buildLocked(b)) return;
+    const val = kind === 't' ? Number(raw) : raw;
+    b.sel[kind] = b.sel[kind] === val ? (kind === 't' ? null : '') : val;   // tapping again clears
+    b.result = null;
+    render();
+  }
+
+  function clearSlot(kind) {
+    const b = state.build;
+    if (buildLocked(b)) return;
+    b.sel[kind] = kind === 't' ? null : '';
+    b.result = null;
+    render();
+  }
+
+  function checkAnswer() {
+    const b = state.build;
+    if (buildLocked(b)) return;   // already answered: never count a word twice
+    const wd = b.word;
+    const s = b.sel;
+    const bad = { i: s.i !== wd.i, m: s.m !== wd.m, f: s.f !== wd.f, t: s.t !== wd.t };
+    if (Object.values(bad).some(Boolean)) {
+      b.missed = true;
+      b.streak = 0;
+      b.result = { ok: false, bad };
+    } else {
+      if (!b.missed) {
+        b.streak++;
+        // The only place progress is earned: a word spelled right first time adds a dot to each of its symbols.
+        [wd.i, wd.m, wd.f].filter(Boolean).forEach((z) => setLevel(z, level(z) + 1));
+      }
+      b.result = { ok: true };
+    }
+    render();
+  }
+
+  function buildView() {
+    const b = state.build;
+    if (!b.word) nextWord();
+    const wd = b.word;
+    const sel = b.sel;
+    const locked = buildLocked(b);
+    const answer = compose(wd.i, wd.m, wd.f, wd.t);
+    const ready = sel.t !== null && (sel.i || sel.m || sel.f);
+
+    const slots = [['i', 'Initial'], ['m', 'Medial'], ['f', 'Final'], ['t', 'Tone']].map(([k, label]) => {
+      const content = k === 't' ? (sel.t ? TONES[sel.t - 1].mark : '') : sel[k];
+      const filled = k === 't' ? sel.t !== null : !!sel[k];
+      const wrong = b.result && b.result.bad && b.result.bad[k];
+      return `<button class="slot ${filled ? 'is-filled' : ''} ${wrong ? 'is-wrong' : ''}" data-act="clear" data-kind="${k}" data-key="slot-${k}" aria-label="${label} slot: ${filled ? 'filled, press to clear' : 'empty'}" ${locked ? 'disabled' : ''}>
+        <span class="tian tian--slot">${zh(content)}</span>
+        <span>${label}</span>
+      </button>`;
+    }).join('');
+
+    const symbolGroup = (kind, slot, title) => `
+      <div class="pal-group">
+        <h3>${title}</h3>
+        <div class="pal-tiles">
+          ${SYMBOLS.filter((s) => s.kind === kind).map((s) => `
+            <button class="pal" data-act="place" data-kind="${slot}" data-val="${s.z}" data-key="pal-${s.z}" aria-pressed="${sel[slot] === s.z}" aria-label="${s.z}" ${locked ? 'disabled' : ''}>
+              <span class="tian tian--chip">${zh(s.z)}</span>
+            </button>`).join('')}
+        </div>
+      </div>`;
+
+    const toneGroup = `
+      <div class="pal-group">
+        <h3>Tone</h3>
+        <div class="pal-tiles">
+          ${TONES.map((t) => `
+            <button class="pal" data-act="place" data-kind="t" data-val="${t.n}" data-key="pal-tone-${t.n}" aria-pressed="${sel.t === t.n}" aria-label="${t.name}" ${locked ? 'disabled' : ''}>
+              <span class="tian tian--chip">${zh(t.mark)}</span>
+              <span class="pal-label">${t.label}</span>
+            </button>`).join('')}
+        </div>
+      </div>`;
+
+    let result = '';
+    if (b.result && b.result.ok) {
+      result = `<div class="feedback ok" role="status">
+        <p class="fb-title">Correct</p>
+        <p class="preview">${zh(answer)}</p>
+        <div class="actions"><button class="btn btn--primary" data-act="next-word" data-autofocus>Next word</button></div>
+      </div>`;
+    } else if (b.result && b.result.revealed) {
+      result = `<div class="feedback" role="status">
+        <p class="fb-title">The answer</p>
+        <p class="preview">${zh(answer)}</p>
+        <div class="actions"><button class="btn btn--primary" data-act="next-word" data-autofocus>Next word</button></div>
+      </div>`;
+    } else if (b.result) {
+      result = `<div class="feedback bad" role="status">
+        <p class="fb-title">Not quite</p>
+        <p>The slots outlined in red are not right yet.</p>
+        <div class="actions"><button class="btn" data-act="reveal">Show answer</button></div>
+      </div>`;
+    }
+
+    return `<section class="build" aria-labelledby="build-h">
+      <div class="panel-head"><h2 id="build-h">Build a syllable</h2></div>
+      <details class="how"${!phoneLayout() || state.build.helpOpen ? ' open' : ''}>
+        <summary>How Build works</summary>
+        <p class="lede">Listen to the word, then spell it in zhuyin. Tap a symbol to place it and tap a slot to clear it. Leave a slot empty when the syllable has none of that part. Spell a word right on your first try and every symbol in it earns a dot.</p>
+      </details>
+
+      <div class="word">
+        <span class="tian tian--hero" style="--fs:.7">${zh(wd.c)}</span>
+        <div class="word-info">
+          <p class="word-meaning">${wd.en}</p>
+          ${hearButton(wd.c, { label: 'Hear the word', primary: true })}
+          <p class="small-note">Correct in a row: ${b.streak}</p>
+          ${audio.supported ? '' : '<p class="small-note">This browser cannot play audio, so you will need to use Show answer to learn each spelling.</p>'}
+        </div>
+      </div>
+
+      <div class="workbench">
+        <div class="slots">${slots}</div>
+        <p class="preview" aria-live="polite"><span class="sr">As written: </span>${zh(compose(sel.i, sel.m, sel.f, sel.t))}</p>
+        ${result}
+        <div class="actions">
+          <button class="btn btn--primary" data-act="check" ${(!ready || locked) ? 'disabled' : ''}>Check</button>
+          ${locked ? '' : '<button class="btn" data-act="next-word">Skip</button>'}
+        </div>
+      </div>
+
+      <div class="palette">
+        ${symbolGroup('initial', 'i', 'Initials')}
+        ${symbolGroup('medial', 'm', 'Medials')}
+        ${symbolGroup('final', 'f', 'Finals')}
+        ${toneGroup}
+      </div>
+    </section>`;
+  }
+
+  /* =======================================================================
+     ===== 8. RENDERING AND EVENTS
+     ======================================================================= */
+  const main = $('#main');
+  const progressEl = $('#progress');
+  const views = { chart: chartView, words: wordsView, cards: cardsView, quiz: quizView, build: buildView };
+
+  function render() {
+    const active = document.activeElement;
+    const key = active && active.dataset ? active.dataset.key : null;
+
+    document.querySelectorAll('.nav [data-view]').forEach((b) => {
+      if (b.dataset.view === state.view) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
+
+    main.innerHTML = views[state.view]();
+    document.body.classList.toggle('sheet-open', state.view === 'chart' && state.chart.open);
+    progressEl.textContent = `${masteredCount()} of ${SYMBOLS.length} symbols mastered`;
+
+    // Keep keyboard focus on the control that was just used; otherwise move it to the next sensible one.
+    let target = key ? main.querySelector(`[data-key="${key}"]`) : null;
+    if (!target) target = main.querySelector('[data-autofocus]');
+    if (target) target.focus();
+  }
+
+  const sheetLayout = () => typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 899px)').matches;
+
+  function pickInChart(id) {
+    state.chart.selected = id;
+    state.chart.open = true;
+    const detail = $('.detail');
+    detail.innerHTML = detailHtml(id);
+    detail.classList.add('is-open');
+    document.body.classList.add('sheet-open');
+    document.querySelectorAll('.sym').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+    if (sheetLayout()) {
+      // The details are a bottom sheet here: keep the tapped tile clear of it rather than scrolling to the details.
+      const tile = document.querySelector(`.sym[data-id="${id}"]`);
+      const sheetTop = window.innerHeight - (parseFloat(getComputedStyle(detail).bottom) || 0) - detail.offsetHeight;
+      const r = tile.getBoundingClientRect();
+      if (r.bottom > sheetTop - 12) window.scrollBy(0, r.bottom - sheetTop + 12);
+      else if (r.top < 8) window.scrollBy(0, r.top - 8);
+    } else {
+      const r = detail.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) detail.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function closeSheet() {
+    state.chart.open = false;
+    const detail = $('.detail');
+    if (detail) detail.classList.remove('is-open');
+    document.body.classList.remove('sheet-open');
+    const tile = document.querySelector('.sym[aria-pressed="true"]');
+    if (tile) tile.focus();   // hand keyboard focus back to the symbol that was open
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const d = el.dataset;
+    switch (d.act) {
+      case 'nav':
+        state.view = d.view;
+        state.chart.open = false;
+        render();
+        window.scrollTo(0, 0);   // each tab starts at the top, not wherever the last one was scrolled to
+        break;
+      case 'pick':         pickInChart(d.id); queueSpeech(chartSpeech(d.id)); break;
+      case 'say':          queueSpeech(d.text); break;
+      case 'say-tones':    audio.sayMany(TONES.map((t) => t.words[0].c)); break;
+      case 'close-sheet':  closeSheet(); break;
+      case 'say-parts':    audio.sayTogether(d.parts.split('|')); break;
+      case 'filter':
+        state[d.mode].filter = d.value;
+        if (d.mode === 'cards') { state.cards.current = null; state.cards.flipped = false; }
+        render();
+        break;
+      case 'flip':
+        state.cards.flipped = true;
+        queueSpeech(bySymbol[state.cards.current].say);
+        render();
+        break;
+      case 'next-card':    nextCard(); break;
+      case 'quiz-mode':    state.quiz.mode = d.value; render(); break;
+      case 'quiz-start':   startQuiz(); break;
+      case 'answer':       answerQuestion(Number(d.index)); break;
+      case 'next-q':       nextQuestion(); break;
+      case 'quiz-reset':   state.quiz = freshQuiz(state.quiz.filter, state.quiz.mode); render(); break;
+      case 'quiz-review':
+        state.cards.filter = 'all';
+        state.cards.current = state.quiz.missed[0].z;
+        state.cards.flipped = false;
+        state.view = 'cards';
+        render();
+        break;
+      case 'place':        place(d.kind, d.val); break;
+      case 'clear':        clearSlot(d.kind); break;
+      case 'check':        checkAnswer(); break;
+      case 'reveal':       state.build.result = { revealed: true }; state.build.streak = 0; render(); break;
+      case 'next-word':
+        if (!buildLocked(state.build)) state.build.streak = 0;   // skipping breaks the streak
+        nextWord();
+        render();
+        break;
+      case 'reset-progress':
+        if (confirm('Reset all saved progress in this browser?')) { progress = {}; saveProgress(); render(); }
+        break;
+    }
+    if (pendingSpeech) {
+      const text = pendingSpeech;
+      pendingSpeech = null;
+      audio.say(text);
+    }
+  });
+
+  document.addEventListener('toggle', (e) => {
+    if (e.target.matches && e.target.matches('details.how')) state.build.helpOpen = e.target.open;
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Escape' && state.view === 'chart' && state.chart.open) closeSheet();
+    if (state.view === 'cards' && state.cards.flipped) {
+      if (e.key === 'ArrowRight') nextCard();
+    }
+    if (state.view === 'quiz') {
+      const q = state.quiz;
+      if (q.questions.length && !q.done && q.answered === null) {
+        const cur = q.questions[q.index];
+        const n = Number(e.key);
+        if (n >= 1 && n <= 4) {
+          if (cur.type === 'hear') answerQuestion(n - 1);
+          else audio.say(cur.options[n - 1].say);
+        } else if (cur.type === 'hear' && e.key.toLowerCase() === 'r') {
+          audio.say(cur.sym.say);
+        }
+      }
+    }
+  });
+
+  audio.init();
+  render();
+
+  // Lets the page install like an app and keep working offline. This only runs when the page is served from a
+  // web address (for example GitHub Pages); opened as a plain file it quietly does nothing.
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  }
+})();
+</script>
+</body>
+</html>
